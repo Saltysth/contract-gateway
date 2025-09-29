@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: contract-gateway
+  cloud:
+    nacos:
+      server-addr: ${NACOS_SERVER:localhost:18848}
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:nacos}
+      discovery:
+        namespace: ${NACOS_NAMESPACE:dev}
+        group: CONTRACT_REVIEW
+        metadata:
+          version: 1.0.0
+          zone: dev
+      config:
+        namespace: ${NACOS_NAMESPACE:dev}
+        group: CONTRACT_REVIEW
+        file-extension: yml
+        refresh-enabled: true
+        # 配置文件名格式: ${spring.application.name}-${spring.profiles.active}.${file-extension}
+        # 例如: contract-gateway-dev.yml
+        enabled: true

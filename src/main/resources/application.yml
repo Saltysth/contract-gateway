@@ -1,0 +1,83 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:SaltyFish}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            []
+          discovery:
+            locator:
+              lower-case-service-id: true
+              enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      database: ${REDIS_DATABASE:0}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3000ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+logging:
+  level:
+    com.saltyfish.contract.gateway: INFO
+    org.springframework.cloud.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/contract-gateway.log
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:contract-gateway-secret-key-2024}
+  expiration: ${JWT_EXPIRATION:86400}
+
+# 网关配置
+gateway:
+  # 黑白名单配置
+  access-control:
+    enabled: true
+    default-policy: allow # allow/deny
+  # URL映射配置
+  url-mapping:
+    enabled: true
+  # 监控配置
+  monitoring:
+    enabled: true

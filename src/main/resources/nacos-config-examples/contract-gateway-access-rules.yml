@@ -1,0 +1,57 @@
+# 访问规则配置示例
+# 该配置文件需要在Nacos配置中心中创建
+# Data ID: contract-gateway-access-rules.yml
+# Group: CONTRACT_REVIEW
+
+access-rules:
+  # 全局默认策略
+  default-policy: allow  # allow/deny
+  
+  # 黑名单规则
+  blacklist:
+    - name: "block-admin-api"
+      match-type: "path"
+      match-pattern: "prefix"
+      match-value: "/admin"
+      priority: 100
+      enabled: true
+      description: "阻止外部访问管理接口"
+    
+    - name: "block-internal-api"
+      match-type: "path"
+      match-pattern: "prefix"
+      match-value: "/internal"
+      priority: 90
+      enabled: true
+      description: "阻止访问内部接口"
+  
+  # 白名单规则
+  whitelist:
+    - name: "allow-health-check"
+      match-type: "path"
+      match-pattern: "exact"
+      match-value: "/actuator/health"
+      priority: 200
+      enabled: true
+      description: "允许健康检查接口"
+    
+    - name: "allow-public-api"
+      match-type: "path"
+      match-pattern: "prefix"
+      match-value: "/api/v1/public"
+      priority: 150
+      enabled: true
+      description: "允许公共API访问"
+
+  # IP黑名单
+  ip-blacklist:
+    - name: "block-suspicious-ip"
+      match-type: "ip"
+      match-pattern: "exact"
+      match-value: "192.168.1.100"
+      priority: 300
+      enabled: false
+      description: "阻止可疑IP访问"
+
+  # 用户黑名单（TODO: 后续实现）
+  user-blacklist: []

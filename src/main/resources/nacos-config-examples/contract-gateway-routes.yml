@@ -1,0 +1,61 @@
+# 路由配置示例
+# 该配置文件需要在Nacos配置中心中创建
+# Data ID: contract-gateway-routes.yml
+# Group: CONTRACT_REVIEW
+
+routes:
+  # 合同服务路由
+  - id: "contract-service-route"
+    uri: "lb://contract-service"
+    predicates:
+      - "Path=/api/v1/contracts/**"
+    filters:
+      - "StripPrefix=3"  # 去掉 /api/v1/contracts 前缀
+    metadata:
+      connect-timeout: 3000
+      response-timeout: 10000
+    order: 100
+  
+  # 用户服务路由
+  - id: "user-service-route"
+    uri: "lb://user-service"
+    predicates:
+      - "Path=/api/v1/users/**"
+    filters:
+      - "StripPrefix=3"  # 去掉 /api/v1/users 前缀
+    metadata:
+      connect-timeout: 3000
+      response-timeout: 5000
+    order: 200
+  
+  # 文件服务路由
+  - id: "file-service-route"
+    uri: "lb://file-storage-service"
+    predicates:
+      - "Path=/api/v1/files/**"
+    filters:
+      - "StripPrefix=3"  # 去掉 /api/v1/files 前缀
+    metadata:
+      connect-timeout: 5000
+      response-timeout: 30000  # 文件上传可能需要更长时间
+    order: 300
+  
+  # 管理接口路由（需要特殊权限）
+  - id: "admin-route"
+    uri: "lb://admin-service"
+    predicates:
+      - "Path=/admin/**"
+    filters:
+      - "StripPrefix=1"  # 去掉 /admin 前缀
+    metadata:
+      connect-timeout: 3000
+      response-timeout: 10000
+      require-auth: true
+    order: 50
+  
+  # 健康检查路由
+  - id: "health-check-route"
+    uri: "http://localhost:8080"
+    predicates:
+      - "Path=/actuator/**"
+    order: 10

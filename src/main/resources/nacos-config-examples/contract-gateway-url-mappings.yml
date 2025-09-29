@@ -1,0 +1,54 @@
+# URL映射配置示例
+# 该配置文件需要在Nacos配置中心中创建
+# Data ID: contract-gateway-url-mappings.yml
+# Group: CONTRACT_REVIEW
+
+url-mappings:
+  # API版本映射
+  - name: "api-v1-contracts"
+    external-path: "/api/v1/contracts/**"
+    internal-path: "/contracts/**"
+    target-service: "contract-service"
+    mapping-type: "rewrite"
+    priority: 100
+    enabled: true
+    description: "合同API v1版本映射"
+  
+  - name: "api-v2-contracts"
+    external-path: "/api/v2/contracts/**"
+    internal-path: "/v2/contracts/**"
+    target-service: "contract-service-v2"
+    mapping-type: "rewrite"
+    priority: 110
+    enabled: true
+    description: "合同API v2版本映射"
+  
+  # 服务别名映射
+  - name: "contract-management-alias"
+    external-path: "/contract-mgmt/**"
+    internal-path: "/management/**"
+    target-service: "contract-management-service"
+    mapping-type: "rewrite"
+    priority: 90
+    enabled: true
+    description: "合同管理服务别名"
+  
+  # 用户服务映射
+  - name: "user-service-mapping"
+    external-path: "/api/v1/users/**"
+    internal-path: "/users/**"
+    target-service: "user-service"
+    mapping-type: "rewrite"
+    priority: 80
+    enabled: true
+    description: "用户服务映射"
+  
+  # 文件服务映射
+  - name: "file-service-mapping"
+    external-path: "/api/v1/files/**"
+    internal-path: "/files/**"
+    target-service: "file-storage-service"
+    mapping-type: "rewrite"
+    priority: 70
+    enabled: true
+    description: "文件服务映射"
