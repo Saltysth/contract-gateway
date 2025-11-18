@@ -5,18 +5,14 @@ spring:
     nacos:
       server-addr: ${NACOS_SERVER:localhost:18848}
       username: ${NACOS_USERNAME:nacos}
-      password: ${NACOS_PASSWORD:nacos}
+      password: ${NACOS_PASSWORD:SaltyLin}
+
       discovery:
-        namespace: ${NACOS_NAMESPACE:dev}
+        server-addr: ${NACOS_SERVER:localhost:18848}
+        namespace: ${NACOS_NAMESPACE:public}
         group: CONTRACT_REVIEW
-        metadata:
-          version: 1.0.0
-          zone: dev
+
       config:
-        namespace: ${NACOS_NAMESPACE:dev}
+        namespace: ${NACOS_NAMESPACE:public}
         group: CONTRACT_REVIEW
         file-extension: yml
-        refresh-enabled: true
-        # 配置文件名格式: ${spring.application.name}-${spring.profiles.active}.${file-extension}
-        # 例如: contract-gateway-dev.yml
-        enabled: true
