@@ -22,16 +22,7 @@ url-mappings:
     priority: 110
     enabled: true
     description: "合同API v2版本映射"
-  
-  # 服务别名映射
-  - name: "contract-management-alias"
-    external-path: "/contract-mgmt/**"
-    internal-path: "/management/**"
-    target-service: "contract-management-service"
-    mapping-type: "rewrite"
-    priority: 90
-    enabled: true
-    description: "合同管理服务别名"
+
   
   # 用户服务映射
   - name: "user-service-mapping"

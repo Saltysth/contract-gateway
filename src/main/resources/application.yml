@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 9090
 
 spring:
   datasource:
@@ -23,16 +23,92 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
+
   cloud:
     gateway:
       server:
         webflux:
+          # 基础路由配置 - 支持通过Nacos动态覆盖
           routes:
-            []
-          discovery:
-            locator:
-              lower-case-service-id: true
-              enabled: true
+            # 合同管理服务路由 (/cm/** -> contract-management-service)
+            - id: contract-management-service-route
+              uri: lb://contract-management-service
+              predicates:
+                - Path=/cm/**
+              filters:
+                # 剥离 /cm 后，追加服务的上下文路径 /contract-management
+                - RewritePath=/cm/(?<path>.*), /contract-management/$\{path}
+                - AddRequestHeader=X-Gateway-Source, contract-gateway
+              metadata:
+                service-name: contract-management-service
+                description: "合同审查管理服务路由"
+
+            # 合同审查引擎服务路由 (/cre/** -> contract-review-engine)
+            - id: contract-review-engine-route
+              uri: lb://contract-review-engine
+              predicates:
+                - Path=/cre/**
+              filters:
+                - RewritePath=/cre/(?<path>.*), /contract-review-engine/$\{path}
+                - AddRequestHeader=X-Gateway-Source, contract-gateway
+              metadata:
+                service-name: contract-review-engine
+                description: "合同审查引擎服务路由"
+
+            # 文件存储服务路由 (/cfs/** -> contract-file-storage-service)
+            - id: contract-file-storage-service-route
+              uri: lb://contract-file-storage-service
+              predicates:
+                - Path=/cfs/**
+              filters:
+                - RewritePath=/cfs/(?<path>.*), /contract-file/$\{path}
+                - AddRequestHeader=X-Gateway-Source, contract-gateway
+              metadata:
+                service-name: contract-file-storage-service
+                description: "文件存储服务路由"
+
+            # AI服务路由 (/cai/** -> contract-ai-service)
+            - id: contract-ai-service-route
+              uri: lb://contract-ai-service
+              predicates:
+                - Path=/cai/**
+              filters:
+                - RewritePath=/cai/(?<path>.*), /contract-ai/$\{path}
+                - AddRequestHeader=X-Gateway-Source, contract-gateway
+              metadata:
+                service-name: contract-ai-service
+                description: "AI服务路由"
+
+            # 健康检查和管理端点路由 - 不转发，直接处理
+            - id: actuator-route
+              uri: http://localhost:${server.port}
+              predicates:
+                - Path=/actuator/**
+              filters:
+                - PreserveHostHeader
+              metadata:
+                description: "本地监控端点路由"
+
+            # 管理API路由 - 不转发，直接处理
+            - id: admin-route
+              uri: http://localhost:${server.port}
+              predicates:
+                - Path=/admin/**
+              filters:
+                - PreserveHostHeader
+              metadata:
+                description: "本地管理API路由"
+
+      # 服务发现配置
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+          # 自动为所有发现的服务创建路由，格式：/service-id/**
+
+      # 全局过滤器配置
+      default-filters:
+        - AddResponseHeader=X-Response-Time, ${T(System).currentTimeMillis()}
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -40,6 +116,18 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       timeout: 3000ms
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.loadbalancer: DEBUG
+    com.saltyfish.contract.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+  file:
+    name: logs/contract-gateway.log
 
 management:
   endpoints:
@@ -54,15 +142,6 @@ management:
       export:
         enabled: true
 
-logging:
-  level:
-    com.saltyfish.contract.gateway: INFO
-    org.springframework.cloud.gateway: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-  file:
-    name: logs/contract-gateway.log
 
 # JWT配置
 jwt:

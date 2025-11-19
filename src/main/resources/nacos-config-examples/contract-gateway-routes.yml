@@ -3,59 +3,196 @@
 # Data ID: contract-gateway-routes.yml
 # Group: CONTRACT_REVIEW
 
-routes:
-  # 合同服务路由
-  - id: "contract-service-route"
-    uri: "lb://contract-service"
-    predicates:
-      - "Path=/api/v1/contracts/**"
-    filters:
-      - "StripPrefix=3"  # 去掉 /api/v1/contracts 前缀
-    metadata:
-      connect-timeout: 3000
-      response-timeout: 10000
-    order: 100
-  
-  # 用户服务路由
-  - id: "user-service-route"
-    uri: "lb://user-service"
-    predicates:
-      - "Path=/api/v1/users/**"
-    filters:
-      - "StripPrefix=3"  # 去掉 /api/v1/users 前缀
-    metadata:
-      connect-timeout: 3000
-      response-timeout: 5000
-    order: 200
-  
-  # 文件服务路由
-  - id: "file-service-route"
-    uri: "lb://file-storage-service"
-    predicates:
-      - "Path=/api/v1/files/**"
-    filters:
-      - "StripPrefix=3"  # 去掉 /api/v1/files 前缀
-    metadata:
-      connect-timeout: 5000
-      response-timeout: 30000  # 文件上传可能需要更长时间
-    order: 300
-  
-  # 管理接口路由（需要特殊权限）
-  - id: "admin-route"
-    uri: "lb://admin-service"
-    predicates:
-      - "Path=/admin/**"
-    filters:
-      - "StripPrefix=1"  # 去掉 /admin 前缀
-    metadata:
-      connect-timeout: 3000
-      response-timeout: 10000
-      require-auth: true
-    order: 50
-  
-  # 健康检查路由
-  - id: "health-check-route"
-    uri: "http://localhost:8080"
-    predicates:
-      - "Path=/actuator/**"
-    order: 10
+spring:
+  cloud:
+    gateway:
+      routes:
+        # 合同管理服务路由 (/cm/** -> contract-management-service)
+        - id: "contract-management-service-route"
+          uri: "lb://contract-management-service"
+          predicates:
+            - "Path=/cm/**"
+          filters:
+            - "StripPrefix=1"  # 去掉 /cm 前缀
+            - "AddRequestHeader=X-Gateway-Source, contract-gateway"
+          metadata:
+            service-name: "contract-management-service"
+            description: "合同管理服务路由 (Contract Management)"
+            connect-timeout: 5000
+            response-timeout: 30000
+            source: "nacos"  # 标识来源为Nacos配置
+          order: 100
+
+        # 合同审查引擎服务路由 (/cre/** -> contract-review-engine)
+        - id: "contract-review-engine-route"
+          uri: "lb://contract-review-engine"
+          predicates:
+            - "Path=/cre/**"
+          filters:
+            - "StripPrefix=1"  # 去掉 /cre 前缀
+            - "AddRequestHeader=X-Gateway-Source, contract-gateway"
+          metadata:
+            service-name: "contract-review-engine"
+            description: "合同审查引擎服务路由 (Contract Review Engine)"
+            connect-timeout: 5000
+            response-timeout: 60000  # AI处理可能需要更长时间
+            source: "nacos"
+          order: 200
+
+        # 文件存储服务路由 (/cfs/** -> contract-file-storage-service)
+        - id: "contract-file-storage-service-route"
+          uri: "lb://contract-file-storage-service"
+          predicates:
+            - "Path=/cfs/**"
+          filters:
+            - "StripPrefix=1"  # 去掉 /cfs 前缀
+            - "AddRequestHeader=X-Gateway-Source, contract-gateway"
+          metadata:
+            service-name: "contract-file-storage-service"
+            description: "文件存储服务路由 (Contract File Storage)"
+            connect-timeout: 5000
+            response-timeout: 120000  # 文件上传下载可能需要更长时间
+            source: "nacos"
+          order: 300
+
+        # AI服务路由 (/cai/** -> contract-ai-service)
+        - id: "contract-ai-service-route"
+          uri: "lb://contract-ai-service"
+          predicates:
+            - "Path=/cai/**"
+          filters:
+            - "StripPrefix=1"  # 去掉 /cai 前缀
+            - "AddRequestHeader=X-Gateway-Source, contract-gateway"
+          metadata:
+            service-name: "contract-ai-service"
+            description: "AI服务路由 (Contract AI Service)"
+            connect-timeout: 10000
+            response-timeout: 300000  # AI模型推理可能需要很长时间
+            source: "nacos"
+          order: 400
+
+        # API版本兼容路由 (/api/v1/cm/** -> contract-management-service)
+        - id: "api-v1-contract-management-route"
+          uri: "lb://contract-management-service"
+          predicates:
+            - "Path=/api/v1/cm/**"
+          filters:
+            - "StripPrefix=2"  # 去掉 /api/v1 前缀
+            - "AddRequestHeader=X-Gateway-Source, contract-gateway"
+            - "AddRequestHeader=API-Version, v1"
+          metadata:
+            service-name: "contract-management-service"
+            description: "API v1 兼容路由 - 合同管理服务"
+            connect-timeout: 5000
+            response-timeout: 30000
+            source: "nacos"
+          order: 150
+
+        # 多条件路由示例 - 合同管理服务写操作
+        - id: "contract-management-write-route"
+          uri: "lb://contract-management-service"
+          predicates:
+            - "Path=/cm/contracts/**"
+            - "Method=POST,PUT,DELETE"
+          filters:
+            - "StripPrefix=1"
+            - "AddRequestHeader=X-Operation-Type, write"
+          metadata:
+            service-name: "contract-management-service"
+            description: "合同管理服务写操作路由"
+            source: "nacos"
+          order: 110
+
+        # 权限控制路由示例 - 管理员权限
+        - id: "admin-protected-route"
+          uri: "lb://contract-management-service"
+          predicates:
+            - "Path=/cm/admin/**"
+          filters:
+            - "StripPrefix=1"
+            - "AddRequestHeader=X-Require-Role, admin"
+          metadata:
+            service-name: "contract-management-service"
+            description: "需要管理员权限的路由"
+            require-auth: true
+            required-role: "admin"
+            source: "nacos"
+          order: 50
+
+        # 负载均衡和重试配置示例 - 合同审查引擎
+        - id: "resilient-review-engine-route"
+          uri: "lb://contract-review-engine"
+          predicates:
+            - "Path=/cre/critical/**"
+          filters:
+            - "StripPrefix=1"
+            - "name: Retry"
+              args:
+                retries: 3
+                statuses: "BAD_GATEWAY,GATEWAY_TIMEOUT"
+                methods: "GET,POST"
+            - "name: CircuitBreaker"
+              args:
+                name: "review-engine-circuit-breaker"
+                fallback-uri: "forward:/fallback/review"
+          metadata:
+            service-name: "contract-review-engine"
+            description: "具有容错能力的合同审查引擎路由"
+            source: "nacos"
+          order: 120
+
+        # 文件上传专用路由 - 更长超时时间
+        - id: "file-upload-route"
+          uri: "lb://contract-file-storage-service"
+          predicates:
+            - "Path=/cfs/upload/**"
+            - "Method=POST,PUT"
+          filters:
+            - "StripPrefix=1"
+            - "AddRequestHeader=X-Operation-Type, upload"
+          metadata:
+            service-name: "contract-file-storage-service"
+            description: "文件上传专用路由"
+            connect-timeout: 10000
+            response-timeout: 600000  # 文件上传需要更长时间
+            source: "nacos"
+          order: 310
+
+        # AI模型推理路由 - 最长超时时间
+        - id: "ai-inference-route"
+          uri: "lb://contract-ai-service"
+          predicates:
+            - "Path=/cai/inference/**"
+          filters:
+            - "StripPrefix=1"
+            - "AddRequestHeader=X-Operation-Type, inference"
+          metadata:
+            service-name: "contract-ai-service"
+            description: "AI模型推理专用路由"
+            connect-timeout: 15000
+            response-timeout: 600000  # AI推理可能需要很长时间
+            source: "nacos"
+          order: 410
+
+# 全局配置
+gateway:
+  # 全局CORS配置
+  globalcors:
+    cors-configurations:
+      '[/**]':
+        allowedOriginPatterns: "*"
+        allowedMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        allowedHeaders: "*"
+        allowCredentials: true
+        maxAge: 3600
+
+  # 全局过滤器配置
+  default-filters:
+    - "AddResponseHeader=X-Gateway-Version, 1.0.0"
+    - "AddResponseHeader=X-Response-Timestamp, ${T(System).currentTimeMillis()}"
+    - "DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin"

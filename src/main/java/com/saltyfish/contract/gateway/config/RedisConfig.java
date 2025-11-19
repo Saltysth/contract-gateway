@@ -29,8 +29,9 @@ public class RedisConfig {
         Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(Object.class);
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
-        jackson2JsonRedisSerializer.setObjectMapper(om);
+        om.activateDefaultTyping(om.getPolymorphicTypeValidator(), ObjectMapper.DefaultTyping.NON_FINAL);
+        // 注意：setObjectMapper方法已过时，Jackson2JsonRedisSerializer现在使用构造函数注入ObjectMapper
+        jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<>(om, Object.class);
 
         // String序列化配置
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();

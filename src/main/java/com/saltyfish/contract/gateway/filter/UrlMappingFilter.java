@@ -17,6 +17,11 @@ import java.net.URI;
 /**
  * URL Mapping Filter
  * URL映射过滤器，实现路径重写功能
+ *
+ * 集成说明：
+ * - 与路由过滤器协同工作，先进行URL映射，再进行路由转发
+ * - 支持动态URL映射配置，可配合路由规则实现灵活的API网关
+ * - 与访问控制过滤器配合，确保映射后的路径仍受权限控制
  */
 @Slf4j
 @Component
@@ -53,7 +58,12 @@ public class UrlMappingFilter implements GlobalFilter, Ordered {
                     .header("X-Target-Service", mapping.getTargetService())
                     .build();
 
-            log.debug("URL映射完成: {} -> {}, 目标服务: {}", originalPath, newPath, mapping.getTargetService());
+            log.info("URL映射完成: {} -> {}, 目标服务: {}", originalPath, newPath, mapping.getTargetService());
+
+            // TODO: 与路由过滤器集成，确保映射后的路径能正确匹配路由规则
+            // TODO: 与访问控制过滤器集成，验证映射后路径的访问权限
+            // TODO: 与监控过滤器集成，记录URL映射统计信息
+            // TODO: 支持基于路由规则的动态URL映射，减少数据库查询
 
             return chain.filter(exchange.mutate().request(modifiedRequest).build());
 
