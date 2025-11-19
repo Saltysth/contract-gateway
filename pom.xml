@@ -65,6 +65,20 @@
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+            <exclusions>
+                <exclusion>
+                    <artifactId>logback-adapter</artifactId>
+                    <groupId>com.alibaba.nacos</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>nacos-log4j2-adapter</artifactId>
+                    <groupId>com.alibaba.nacos</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>nacos-logback-adapter-12</artifactId>
+                    <groupId>com.alibaba.nacos</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Spring Cloud LoadBalancer -->
