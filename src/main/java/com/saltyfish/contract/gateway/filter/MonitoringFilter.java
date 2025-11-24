@@ -31,8 +31,29 @@ public class MonitoringFilter implements GlobalFilter, Ordered {
         long startTime = System.currentTimeMillis();
 
         return chain.filter(exchange)
-                .doOnSuccess(aVoid -> recordMetrics(request, exchange.getResponse(), startTime, null))
-                .doOnError(throwable -> recordMetrics(request, exchange.getResponse(), startTime, throwable));
+                .doOnSuccess(aVoid -> {
+                    addResponseTimeHeader(exchange, startTime);
+                    recordMetrics(request, exchange.getResponse(), startTime, null);
+                })
+                .doOnError(throwable -> {
+                    addResponseTimeHeader(exchange, startTime);
+                    recordMetrics(request, exchange.getResponse(), startTime, throwable);
+                });
+    }
+
+    /**
+     * 添加响应时间头
+     */
+    private void addResponseTimeHeader(ServerWebExchange exchange, long startTime) {
+        try {
+            long responseTime = System.currentTimeMillis() - startTime;
+            ServerHttpResponse response = exchange.getResponse();
+            response.getHeaders().add("X-Response-Time", String.valueOf(responseTime));
+
+            log.debug("已添加响应时间头: X-Response-Time={}ms", responseTime);
+        } catch (Exception e) {
+            log.error("添加响应时间头异常", e);
+        }
     }
 
     /**
