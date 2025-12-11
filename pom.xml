@@ -7,6 +7,7 @@
 
     <groupId>com.saltyfish.contract</groupId>
     <artifactId>contract-gateway</artifactId>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>contract-gateway</name>
@@ -185,6 +186,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
+                    <finalName>contract-gateway</finalName>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
