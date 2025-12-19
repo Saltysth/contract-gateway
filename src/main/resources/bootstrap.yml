@@ -11,6 +11,16 @@ spring:
         server-addr: ${NACOS_SERVER:localhost:18848}
         namespace: ${NACOS_NAMESPACE:public}
         group: CONTRACT_REVIEW
+        enabled: true
+        heart-beat:
+          enabled: true
+          interval: 5000
+          timeout: 15000
+        metadata:
+          management:
+            context-path: /actuator
+          health:
+            check-url: http://${spring.cloud.client.ip-address}:${server.port}/actuator/health
 
       config:
         namespace: ${NACOS_NAMESPACE:public}

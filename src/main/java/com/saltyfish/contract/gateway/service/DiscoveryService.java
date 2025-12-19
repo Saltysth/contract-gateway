@@ -22,12 +22,13 @@ public class DiscoveryService {
     /**
      * 获取服务的所有实例
      *
-     * @param serviceName 服务名称
+     * @param serviceName    服务名称
+     * @param groupName 分组名称
      * @return 服务实例列表
      */
-    public List<Instance> getAllInstances(String serviceName) {
+    public List<Instance> getAllInstances(String serviceName, String groupName) {
         try {
-            List<Instance> instances = namingService.getAllInstances(serviceName);
+            List<Instance> instances = namingService.getAllInstances(serviceName, groupName);
             log.debug("获取服务实例成功: serviceName={}, instanceCount={}", serviceName, instances.size());
             return instances;
         } catch (Exception e) {

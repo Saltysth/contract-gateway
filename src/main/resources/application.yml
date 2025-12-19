@@ -98,6 +98,27 @@ spring:
                 - PreserveHostHeader
               metadata:
                 description: "本地管理API路由"
+
+            # 健康状态API路由 - 不转发，直接处理
+            - id: health-api-route
+              uri: http://localhost:${server.port}
+              predicates:
+                - Path=/actuator/health/**
+              filters:
+                - PreserveHostHeader
+              metadata:
+                description: "本地健康状态API路由"
+
+            # 健康状态页面路由 - 静态资源，不转发
+            - id: health-dashboard-route
+              uri: http://localhost:${server.port}
+              predicates:
+                - Path=/health-dashboard.html,/health-dashboard
+              filters:
+                - PreserveHostHeader
+                - RewritePath=/health-dashboard, /health-dashboard.html
+              metadata:
+                description: "健康状态展示页面路由"
           # 跨域配置
           globalcors:
             cors-configurations:
@@ -143,9 +164,22 @@ management:
     web:
       exposure:
         include: health,info,prometheus,gateway
+      base-path: /actuator
+    cors:
+      allowed-origins: "*"
+      allowed-methods: GET,POST
   endpoint:
     health:
       show-details: always
+      show-components: always
+  health:
+    defaults:
+      enabled: true
+    redis:
+      enabled: true
+    diskspace:
+      enabled: true
+      threshold: 100MB
   prometheus:
     metrics:
       export:
