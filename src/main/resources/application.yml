@@ -79,6 +79,18 @@ spring:
                 service-name: contract-ai-service
                 description: "AI服务路由"
 
+            # 若依鉴权服务路由 (/csr/** -> contract-security-ruoyi)
+            - id: contract-security-ruoyi
+              uri: lb://contract-security-ruoyi
+              predicates:
+                - Path=/csr/**
+              filters:
+                - RewritePath=/csr/(?<path>.*), /contract-security-ruoyi/$\{path}
+                - AddRequestHeader=X-Gateway-Source, contract-gateway
+              metadata:
+                service-name: contract-security-ruoyi
+                description: "若依鉴权服务路由"
+
             # 健康检查和管理端点路由 - 不转发，直接处理
             - id: actuator-route
               uri: http://localhost:${server.port}
@@ -109,6 +121,16 @@ spring:
               metadata:
                 description: "本地健康状态API路由"
 
+            # 健康检查接口路由 - 不转发，直接处理
+            - id: health-services-route
+              uri: http://localhost:${server.port}
+              predicates:
+                - Path=/health/**
+              filters:
+                - PreserveHostHeader
+              metadata:
+                description: "本地健康检查接口路由"
+
             # 健康状态页面路由 - 静态资源，不转发
             - id: health-dashboard-route
               uri: http://localhost:${server.port}
@@ -119,21 +141,21 @@ spring:
                 - RewritePath=/health-dashboard, /health-dashboard.html
               metadata:
                 description: "健康状态展示页面路由"
-          # 跨域配置
-          globalcors:
-            cors-configurations:
-              # 匹配所有请求路径
-              '[/**]':
-                # 允许的源（前端公网地址，测试阶段可设为*，生产需指定具体域名）
-                allowed-origin-patterns: "*"
-                # 允许的请求方法（GET/POST/PUT/DELETE等，*表示所有）
-                allowed-methods: "*"
-                # 允许的请求头（*表示所有，如token、content-type等）
-                allowed-headers: "*"
-                # 是否允许携带凭证（cookie/token等，前端需要传凭证时设为true）
-                allow-credentials: true
-                # 预检请求（OPTIONS）的缓存时间（秒），避免频繁预检
-                max-age: 3600
+          # 跨域配置 - 注释掉以避免与CorsWebFilter冲突
+          # globalcors:
+          #   cors-configurations:
+          #     # 匹配所有请求路径
+          #     '[/**]':
+          #       # 允许的源（前端公网地址，测试阶段可设为*，生产需指定具体域名）
+          #       allowed-origin-patterns: "*"
+          #       # 允许的请求方法（GET/POST/PUT/DELETE等，*表示所有）
+          #       allowed-methods: "*"
+          #       # 允许的请求头（*表示所有，如token、content-type等）
+          #       allowed-headers: "*"
+          #       # 是否允许携带凭证（cookie/token等，前端需要传凭证时设为true）
+          #       allow-credentials: true
+          #       # 预检请求（OPTIONS）的缓存时间（秒），避免频繁预检
+          #       max-age: 3600
           discovery:
             locator:
               enabled: true
@@ -203,3 +225,13 @@ gateway:
   # 监控配置
   monitoring:
     enabled: true
+
+# 若依系统配置
+ruoyi:
+  auth:
+    # 若依系统服务地址
+    server-url: ${RUOYI_SERVER_URL:http://localhost:8080}
+    # Token验证接口路径
+    validate-path: /auth/validate
+    # Token刷新时间（分钟）
+    refresh-time: 20
