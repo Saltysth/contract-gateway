@@ -36,6 +36,12 @@ public class AccessControlFilter implements GlobalFilter, Ordered {
 
         log.debug("访问控制检查: path={}, method={}, clientIp={}", path, method, clientIp);
 
+        // 跳过登录接口的访问控制（登录接口不应该被黑白名单拦截）
+        if (isAuthEndpoint(path)) {
+            log.debug("跳过认证接口的访问控制: path={}", path);
+            return chain.filter(exchange);
+        }
+
         try {
             // 检查访问权限
             boolean allowed = accessControlService.isAccessAllowed(path, method, clientIp, null);
@@ -70,8 +76,23 @@ public class AccessControlFilter implements GlobalFilter, Ordered {
             return xRealIp;
         }
 
-        return request.getRemoteAddress() != null ? 
+        return request.getRemoteAddress() != null ?
                request.getRemoteAddress().getAddress().getHostAddress() : "unknown";
+    }
+
+    /**
+     * 判断是否为认证接口（登录、注册等）
+     * 这些接口应该跳过访问控制检查
+     */
+    private boolean isAuthEndpoint(String path) {
+        // 常见的认证接口路径前缀
+        return path != null && (
+            path.startsWith("/csr/contract/auth/") ||
+            path.startsWith("/auth/") ||
+            path.startsWith("/login") ||
+            path.startsWith("/register") ||
+            path.equals("/csr/contract/auth/login")
+        );
     }
 
     @Override

@@ -208,11 +208,6 @@ management:
         enabled: true
 
 
-# JWT配置
-jwt:
-  secret: ${JWT_SECRET:contract-gateway-secret-key-2024}
-  expiration: ${JWT_EXPIRATION:86400}
-
 # 网关配置
 gateway:
   # 黑白名单配置
@@ -225,13 +220,3 @@ gateway:
   # 监控配置
   monitoring:
     enabled: true
-
-# 若依系统配置
-ruoyi:
-  auth:
-    # 若依系统服务地址
-    server-url: ${RUOYI_SERVER_URL:http://localhost:8080}
-    # Token验证接口路径
-    validate-path: /auth/validate
-    # Token刷新时间（分钟）
-    refresh-time: 20
