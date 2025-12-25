@@ -1,5 +1,7 @@
 server:
   port: 9090
+  servlet:
+    context-path: /contract-gateway
 
 spring:
   datasource:
@@ -91,6 +93,18 @@ spring:
                 service-name: contract-security-ruoyi
                 description: "若依鉴权服务路由"
 
+            # 网关本地服务路由 (/cg/** -> 本地服务)
+            - id: contract-gateway-route
+              uri: http://localhost:${server.port}
+              predicates:
+                - Path=/cg/**
+              filters:
+                - RewritePath=/cg/(?<path>.*), /contract-gateway/$\{path}
+                - PreserveHostHeader
+              metadata:
+                service-name: contract-gateway
+                description: "网关本地服务路由"
+
             # 健康检查和管理端点路由 - 不转发，直接处理
             - id: actuator-route
               uri: http://localhost:${server.port}
@@ -101,15 +115,6 @@ spring:
               metadata:
                 description: "本地监控端点路由"
 
-            # 管理API路由 - 不转发，直接处理
-            - id: admin-route
-              uri: http://localhost:${server.port}
-              predicates:
-                - Path=/admin/**
-              filters:
-                - PreserveHostHeader
-              metadata:
-                description: "本地管理API路由"
 
             # 健康状态API路由 - 不转发，直接处理
             - id: health-api-route
