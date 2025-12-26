@@ -6,7 +6,6 @@ import com.saltyfish.contract.gateway.service.HealthStatusService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,6 +21,8 @@ import java.util.Map;
 /**
  * 微服务健康状态控制器
  * 提供基于 Nacos 的微服务健康状态聚合展示功能
+ *
+ * 鉴权：使用 @RemotePreAuthorize 注解，由 RemoteAuthWebFilter 拦截并调用若依鉴权中心
  */
 @Slf4j
 @RestController

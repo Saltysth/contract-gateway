@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.util.CollectionUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -88,46 +89,41 @@ public class DynamicRouteConfig {
      * 刷新路由配置
      */
     private void refreshRoutes(String configInfo) {
-        try {
-            // 解析YAML配置中的路由定义
-            List<RouteDefinition> routeDefinitions = parseRouteDefinitions(configInfo);
+        // 解析YAML配置中的路由定义
+        List<RouteDefinition> routeDefinitions = parseRouteDefinitions(configInfo);
 
-            if (!CollectionUtils.isEmpty(routeDefinitions)) {
-                log.info("准备更新{}个路由定义", routeDefinitions.size());
+        if (!CollectionUtils.isEmpty(routeDefinitions)) {
+            log.info("准备更新{}个路由定义", routeDefinitions.size());
 
-                // 先删除所有通过配置管理的路由
-                clearConfiguredRoutes();
-
-                // 添加新的路由定义
-                for (RouteDefinition routeDefinition : routeDefinitions) {
-                    routeDefinitionWriter.save(Mono.just(routeDefinition)).block();
+            // 使用reactor的非阻塞方式处理路由更新
+            clearConfiguredRoutes()
+                .thenMany(Flux.fromIterable(routeDefinitions))
+                .flatMap(routeDefinition -> {
                     log.debug("添加路由: {} -> {}", routeDefinition.getId(), routeDefinition.getUri());
-                }
-
-                log.info("路由配置更新完成");
-            }
-        } catch (Exception e) {
-            log.error("刷新路由配置失败", e);
+                    return routeDefinitionWriter.save(Mono.just(routeDefinition));
+                })
+                .collectList()
+                .doOnSuccess(v -> log.info("路由配置更新完成"))
+                .doOnError(e -> log.error("刷新路由配置失败", e))
+                .subscribeOn(Schedulers.boundedElastic())
+                .subscribe();
         }
     }
 
     /**
      * 清除通过配置管理的路由
+     * @return Mono完成信号
      */
-    private void clearConfiguredRoutes() {
-        try {
-            Flux<RouteDefinition> routeDefinitions = routeDefinitionLocator.getRouteDefinitions();
-            routeDefinitions
-                .filter(route -> route.getMetadata() != null
-                    && "nacos".equals(route.getMetadata().get("source")))
-                .doOnNext(route -> {
-                    routeDefinitionWriter.delete(Mono.just(route.getId())).block();
-                    log.debug("删除路由: {}", route.getId());
-                })
-                .blockLast();
-        } catch (Exception e) {
-            log.error("清除路由配置失败", e);
-        }
+    private Mono<Void> clearConfiguredRoutes() {
+        return routeDefinitionLocator.getRouteDefinitions()
+            .filter(route -> route.getMetadata() != null
+                && "nacos".equals(route.getMetadata().get("source")))
+            .flatMap(route -> {
+                log.debug("删除路由: {}", route.getId());
+                return routeDefinitionWriter.delete(Mono.just(route.getId()));
+            })
+            .then()
+            .doOnError(e -> log.error("清除路由配置失败", e));
     }
 
     /**

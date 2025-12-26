@@ -15,7 +15,9 @@ import reactor.core.publisher.Mono;
 
 /**
  * Access Control Filter
- * 访问控制过滤器，实现API黑白名单控制（响应式版本）
+ * 访问控制过滤器，实现基于IP、路径、方法的黑白名单控制（响应式版本）
+ *
+ * 职责：处理IP黑名单、IP白名单、路径访问限制等
  */
 @Slf4j
 @Component
@@ -36,13 +38,7 @@ public class AccessControlFilter implements GlobalFilter, Ordered {
 
         log.debug("访问控制检查: path={}, method={}, clientIp={}", path, method, clientIp);
 
-        // 跳过登录接口的访问控制（登录接口不应该被黑白名单拦截）
-        if (isAuthEndpoint(path)) {
-            log.debug("跳过认证接口的访问控制: path={}", path);
-            return chain.filter(exchange);
-        }
-
-        // 检查访问权限
+        // 检查访问权限（IP黑白名单、路径限制等）
         return accessControlService.isAccessAllowed(path, method, clientIp, null)
                 .flatMap(allowed -> {
                     if (!allowed) {
@@ -56,7 +52,8 @@ public class AccessControlFilter implements GlobalFilter, Ordered {
                 })
                 .onErrorResume(e -> {
                     log.error("访问控制检查异常: path={}, method={}, clientIp={}", path, method, clientIp, e);
-                    response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
+                    // 访问控制异常时拒绝访问（fail-closed 安全策略）
+                    response.setStatusCode(HttpStatus.FORBIDDEN);
                     return response.setComplete();
                 });
     }
@@ -79,24 +76,9 @@ public class AccessControlFilter implements GlobalFilter, Ordered {
                request.getRemoteAddress().getAddress().getHostAddress() : "unknown";
     }
 
-    /**
-     * 判断是否为认证接口（登录、注册等）
-     * 这些接口应该跳过访问控制检查
-     */
-    private boolean isAuthEndpoint(String path) {
-        // 常见的认证接口路径前缀
-        return path != null && (
-            path.startsWith("/csr/contract/auth/") ||
-            path.startsWith("/auth/") ||
-            path.startsWith("/login") ||
-            path.startsWith("/register") ||
-            path.equals("/csr/contract/auth/login")
-        );
-    }
-
     @Override
     public int getOrder() {
-        // 设置较高优先级，在其他过滤器之前执行
+        // 设置较高优先级，最先执行访问控制检查
         return -100;
     }
 }

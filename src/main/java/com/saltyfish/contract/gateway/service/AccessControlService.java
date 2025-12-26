@@ -57,8 +57,8 @@ public class AccessControlService {
                 .map(rules -> checkAccessRules(rules, path, method, clientIp, userId))
                 .onErrorResume(e -> {
                     log.error("检查访问权限异常: path={}, method={}, clientIp={}", path, method, clientIp, e);
-                    // 异常情况下默认允许访问，避免影响正常业务
-                    return Mono.just(true);
+                    // 异常情况下拒绝访问（fail-closed安全策略）
+                    return Mono.just(false);
                 });
     }
 
