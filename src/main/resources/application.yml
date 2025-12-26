@@ -1,5 +1,7 @@
 server:
   port: 9090
+  servlet:
+    context-path: /contract-gateway
 
 spring:
   # R2DBC配置（适用于WebFlux）
@@ -85,7 +87,7 @@ spring:
               predicates:
                 - Path=/cg/**
               filters:
-                - RewritePath=/cg/(?<path>.*), /contract-gateway/$\{path}
+                - RewritePath=/cg/(?<path>.*), /$\{path}
                 - PreserveHostHeader
               metadata:
                 service-name: contract-gateway
