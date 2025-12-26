@@ -13,7 +13,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * Admin Controller
- * 管理控制器，提供缓存管理和系统管理接口
+ * 管理控制器，提供缓存管理和系统管理接口（响应式版本）
  */
 @Slf4j
 @RestController
@@ -33,56 +33,52 @@ public class AdminController {
      * 刷新访问规则缓存
      */
     @PostMapping("/cache/access-rules/refresh")
-    public ResponseEntity<String> refreshAccessRulesCache() {
-        try {
-            accessControlService.refreshAccessRulesCache();
-            return ResponseEntity.ok("访问规则缓存刷新成功");
-        } catch (Exception e) {
-            log.error("刷新访问规则缓存失败", e);
-            return ResponseEntity.internalServerError().body("刷新失败: " + e.getMessage());
-        }
+    public Mono<ResponseEntity<String>> refreshAccessRulesCache() {
+        return accessControlService.refreshAccessRulesCache()
+                .map(rules -> ResponseEntity.ok("访问规则缓存刷新成功，规则数量: " + rules.size()))
+                .onErrorResume(e -> {
+                    log.error("刷新访问规则缓存失败", e);
+                    return Mono.just(ResponseEntity.internalServerError().body("刷新失败: " + e.getMessage()));
+                });
     }
 
     /**
      * 清除访问规则缓存
      */
     @DeleteMapping("/cache/access-rules")
-    public ResponseEntity<String> clearAccessRulesCache() {
-        try {
-            accessControlService.clearAccessRulesCache();
-            return ResponseEntity.ok("访问规则缓存清除成功");
-        } catch (Exception e) {
-            log.error("清除访问规则缓存失败", e);
-            return ResponseEntity.internalServerError().body("清除失败: " + e.getMessage());
-        }
+    public Mono<ResponseEntity<String>> clearAccessRulesCache() {
+        return accessControlService.clearAccessRulesCache()
+                .then(Mono.just(ResponseEntity.ok("访问规则缓存清除成功")))
+                .onErrorResume(e -> {
+                    log.error("清除访问规则缓存失败", e);
+                    return Mono.just(ResponseEntity.internalServerError().body("清除失败: " + e.getMessage()));
+                });
     }
 
     /**
      * 刷新URL映射缓存
      */
     @PostMapping("/cache/url-mappings/refresh")
-    public ResponseEntity<String> refreshUrlMappingsCache() {
-        try {
-            urlMappingService.refreshUrlMappingsCache();
-            return ResponseEntity.ok("URL映射缓存刷新成功");
-        } catch (Exception e) {
-            log.error("刷新URL映射缓存失败", e);
-            return ResponseEntity.internalServerError().body("刷新失败: " + e.getMessage());
-        }
+    public Mono<ResponseEntity<String>> refreshUrlMappingsCache() {
+        return urlMappingService.refreshUrlMappingsCache()
+                .map(mappings -> ResponseEntity.ok("URL映射缓存刷新成功，映射数量: " + mappings.size()))
+                .onErrorResume(e -> {
+                    log.error("刷新URL映射缓存失败", e);
+                    return Mono.just(ResponseEntity.internalServerError().body("刷新失败: " + e.getMessage()));
+                });
     }
 
     /**
      * 清除URL映射缓存
      */
     @DeleteMapping("/cache/url-mappings")
-    public ResponseEntity<String> clearUrlMappingsCache() {
-        try {
-            urlMappingService.clearUrlMappingsCache();
-            return ResponseEntity.ok("URL映射缓存清除成功");
-        } catch (Exception e) {
-            log.error("清除URL映射缓存失败", e);
-            return ResponseEntity.internalServerError().body("清除失败: " + e.getMessage());
-        }
+    public Mono<ResponseEntity<String>> clearUrlMappingsCache() {
+        return urlMappingService.clearUrlMappingsCache()
+                .then(Mono.just(ResponseEntity.ok("URL映射缓存清除成功")))
+                .onErrorResume(e -> {
+                    log.error("清除URL映射缓存失败", e);
+                    return Mono.just(ResponseEntity.internalServerError().body("清除失败: " + e.getMessage()));
+                });
     }
 
     /**
@@ -97,7 +93,7 @@ public class AdminController {
      * 系统信息
      */
     @GetMapping("/info")
-    public ResponseEntity<Object> info() {
+    public ResponseEntity<String> info() {
         // TODO: 返回系统信息，如版本、启动时间、配置信息等
         return ResponseEntity.ok("Gateway system info");
     }
@@ -109,13 +105,10 @@ public class AdminController {
      */
     @GetMapping("/routes")
     public Flux<RouteDefinition> getAllRoutes() {
-        try {
-            return routeDefinitionLocator.getRouteDefinitions()
-                    .doOnNext(route -> log.debug("获取路由: {} -> {}", route.getId(), route.getUri()));
-        } catch (Exception e) {
-            log.error("获取路由定义失败", e);
-            return Flux.empty();
-        }
+        return routeDefinitionLocator.getRouteDefinitions()
+                .doOnNext(route -> log.debug("获取路由: {} -> {}", route.getId(), route.getUri()))
+                .doOnError(e -> log.error("获取路由定义失败", e))
+                .onErrorResume(e -> Flux.empty());
     }
 
     /**
@@ -123,16 +116,13 @@ public class AdminController {
      */
     @GetMapping("/routes/{id}")
     public Mono<ResponseEntity<RouteDefinition>> getRouteById(@PathVariable String id) {
-        try {
-            return routeDefinitionLocator.getRouteDefinitions()
-                    .filter(route -> route.getId().equals(id))
-                    .next()
-                    .map(ResponseEntity::ok)
-                    .defaultIfEmpty(ResponseEntity.notFound().build());
-        } catch (Exception e) {
-            log.error("获取路由定义失败: routeId={}", id, e);
-            return Mono.just(ResponseEntity.internalServerError().build());
-        }
+        return routeDefinitionLocator.getRouteDefinitions()
+                .filter(route -> route.getId().equals(id))
+                .next()
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build())
+                .doOnError(e -> log.error("获取路由定义失败: routeId={}", id, e))
+                .onErrorResume(e -> Mono.just(ResponseEntity.internalServerError().build()));
     }
 
     /**
@@ -140,32 +130,22 @@ public class AdminController {
      * TODO: 实现路由配置的动态刷新功能
      */
     @PostMapping("/routes/refresh")
-    public ResponseEntity<String> refreshRoutes() {
-        try {
-            // TODO: 调用DynamicRouteConfig的路由刷新方法
-            log.info("手动触发路由配置刷新");
-            return ResponseEntity.ok("路由配置刷新成功（功能待实现）");
-        } catch (Exception e) {
-            log.error("刷新路由配置失败", e);
-            return ResponseEntity.internalServerError().body("刷新失败: " + e.getMessage());
-        }
+    public Mono<ResponseEntity<String>> refreshRoutes() {
+        // TODO: 调用DynamicRouteConfig的路由刷新方法
+        log.info("手动触发路由配置刷新");
+        return Mono.just(ResponseEntity.ok("路由配置刷新成功（功能待实现）"));
     }
 
     /**
      * 获取路由统计信息
      */
     @GetMapping("/routes/stats")
-    public ResponseEntity<Object> getRouteStats() {
-        try {
-            // TODO: 实现路由统计功能，记录每个路由的调用次数、响应时间等
-            return ResponseEntity.ok(java.util.Map.of(
+    public Mono<ResponseEntity<Object>> getRouteStats() {
+        // TODO: 实现路由统计功能，记录每个路由的调用次数、响应时间等
+        return Mono.just(ResponseEntity.ok(java.util.Map.of(
                 "totalRoutes", "待实现",
                 "activeRoutes", "待实现",
                 "lastUpdated", System.currentTimeMillis()
-            ));
-        } catch (Exception e) {
-            log.error("获取路由统计信息失败", e);
-            return ResponseEntity.internalServerError().body("获取统计信息失败");
-        }
+        )));
     }
 }

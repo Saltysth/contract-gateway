@@ -15,7 +15,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * Access Control Filter
- * 访问控制过滤器，实现API黑白名单控制
+ * 访问控制过滤器，实现API黑白名单控制（响应式版本）
  */
 @Slf4j
 @Component
@@ -42,24 +42,23 @@ public class AccessControlFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        try {
-            // 检查访问权限
-            boolean allowed = accessControlService.isAccessAllowed(path, method, clientIp, null);
-            
-            if (!allowed) {
-                log.warn("访问被拒绝: path={}, method={}, clientIp={}", path, method, clientIp);
-                response.setStatusCode(HttpStatus.FORBIDDEN);
-                return response.setComplete();
-            }
+        // 检查访问权限
+        return accessControlService.isAccessAllowed(path, method, clientIp, null)
+                .flatMap(allowed -> {
+                    if (!allowed) {
+                        log.warn("访问被拒绝: path={}, method={}, clientIp={}", path, method, clientIp);
+                        response.setStatusCode(HttpStatus.FORBIDDEN);
+                        return response.setComplete();
+                    }
 
-            log.debug("访问允许: path={}, method={}, clientIp={}", path, method, clientIp);
-            return chain.filter(exchange);
-
-        } catch (Exception e) {
-            log.error("访问控制检查异常: path={}, method={}, clientIp={}", path, method, clientIp, e);
-            response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
-            return response.setComplete();
-        }
+                    log.debug("访问允许: path={}, method={}, clientIp={}", path, method, clientIp);
+                    return chain.filter(exchange);
+                })
+                .onErrorResume(e -> {
+                    log.error("访问控制检查异常: path={}, method={}, clientIp={}", path, method, clientIp, e);
+                    response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
+                    return response.setComplete();
+                });
     }
 
     /**

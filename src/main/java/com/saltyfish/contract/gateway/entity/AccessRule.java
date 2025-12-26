@@ -1,13 +1,9 @@
 package com.saltyfish.contract.gateway.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.domain.Persistable;
+import org.springframework.data.relational.core.mapping.Column;
+import org.springframework.data.relational.core.mapping.Table;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -15,86 +11,96 @@ import java.time.LocalDateTime;
 
 /**
  * Access Rule Entity
- * 访问规则实体类
+ * 访问规则实体类（WebFlux响应式版本）
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-@Entity
 @Table(name = "access_rules")
-public class AccessRule {
+public class AccessRule implements Persistable<Long> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     /**
      * 规则名称
      */
-    @Column(name = "rule_name", nullable = false, length = 100)
+    @Column("rule_name")
     private String ruleName;
 
     /**
      * 规则类型：whitelist/blacklist
      */
-    @Column(name = "rule_type", nullable = false, length = 20)
+    @Column("rule_type")
     private String ruleType;
 
     /**
      * 匹配类型：path/ip/user/method
      */
-    @Column(name = "match_type", nullable = false, length = 20)
+    @Column("match_type")
     private String matchType;
 
     /**
      * 匹配模式：exact/prefix/wildcard/regex
      */
-    @Column(name = "match_pattern", nullable = false, length = 20)
+    @Column("match_pattern")
     private String matchPattern;
 
     /**
      * 匹配值
      */
-    @Column(name = "match_value", nullable = false, length = 500)
+    @Column("match_value")
     private String matchValue;
 
     /**
      * 优先级，数值越大优先级越高
      */
-    @Column(name = "priority", nullable = false)
+    @Column("priority")
     private Integer priority = 0;
 
     /**
      * 是否启用
      */
-    @Column(name = "enabled", nullable = false)
+    @Column("enabled")
     private Boolean enabled = true;
 
     /**
      * 描述
      */
-    @Column(name = "description", length = 500)
+    @Column("description")
     private String description;
 
     /**
      * 创建时间
      */
-    @Column(name = "created_at", nullable = false)
+    @Column("created_at")
     private LocalDateTime createdAt;
 
     /**
      * 更新时间
      */
-    @Column(name = "updated_at", nullable = false)
+    @Column("updated_at")
     private LocalDateTime updatedAt;
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+    @Override
+    public boolean isNew() {
+        return id == null;
     }
 
-    @PreUpdate
-    protected void onUpdate() {
+    /**
+     * 创建时设置时间
+     */
+    public void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        updatedAt = now;
+    }
+
+    /**
+     * 更新时设置时间
+     */
+    public void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
 }

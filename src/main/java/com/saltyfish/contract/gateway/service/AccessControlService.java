@@ -2,19 +2,19 @@ package com.saltyfish.contract.gateway.service;
 
 import com.saltyfish.contract.gateway.entity.AccessRule;
 import com.saltyfish.contract.gateway.repository.AccessRuleRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
  * Access Control Service
- * 访问控制服务，提供黑白名单检查功能
+ * 访问控制服务，提供黑白名单检查功能（响应式版本）
  */
 @Slf4j
 @Service
@@ -24,18 +24,23 @@ public class AccessControlService {
     private AccessRuleRepository accessRuleRepository;
 
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private ReactiveRedisTemplate<String, Object> reactiveRedisTemplate;
 
     private static final String CACHE_KEY_PREFIX = "gateway:access:rules:";
     private static final String CACHE_KEY_ALL_RULES = CACHE_KEY_PREFIX + "all";
-    private static final long CACHE_EXPIRE_SECONDS = 300; // 5分钟缓存
+    private static final Duration CACHE_EXPIRE = Duration.ofSeconds(300); // 5分钟缓存
 
     /**
      * 初始化访问规则缓存
      */
-    @PostConstruct
-    public void initAccessRulesCache() {
-        refreshAccessRulesCache();
+    public Mono<Void> initAccessRulesCache() {
+        return refreshAccessRulesCache()
+                .then()
+                .doOnSubscribe(v -> log.info("开始初始化访问规则缓存"))
+                .onErrorResume(e -> {
+                    log.error("初始化访问规则缓存失败", e);
+                    return Mono.empty();
+                });
     }
 
     /**
@@ -47,47 +52,50 @@ public class AccessControlService {
      * @param userId   用户ID（可选）
      * @return 是否允许访问
      */
-    public boolean isAccessAllowed(String path, String method, String clientIp, String userId) {
-        try {
-            // 获取缓存的访问规则
-            List<AccessRule> rules = getCachedAccessRules();
-            
-            // 按优先级检查规则
-            for (AccessRule rule : rules) {
-                if (!rule.getEnabled()) {
-                    continue;
-                }
-                
-                boolean matched = matchRule(rule, path, method, clientIp, userId);
-                if (matched) {
-                    if ("blacklist".equals(rule.getRuleType())) {
-                        log.debug("命中黑名单规则: {}, path={}", rule.getRuleName(), path);
-                        return false;
-                    } else if ("whitelist".equals(rule.getRuleType())) {
-                        log.debug("命中白名单规则: {}, path={}", rule.getRuleName(), path);
-                        return true;
-                    }
+    public Mono<Boolean> isAccessAllowed(String path, String method, String clientIp, String userId) {
+        return getCachedAccessRules()
+                .map(rules -> checkAccessRules(rules, path, method, clientIp, userId))
+                .onErrorResume(e -> {
+                    log.error("检查访问权限异常: path={}, method={}, clientIp={}", path, method, clientIp, e);
+                    // 异常情况下默认允许访问，避免影响正常业务
+                    return Mono.just(true);
+                });
+    }
+
+    /**
+     * 检查访问规则
+     */
+    private boolean checkAccessRules(List<AccessRule> rules, String path, String method, String clientIp, String userId) {
+        // 按优先级检查规则
+        for (AccessRule rule : rules) {
+            if (!rule.getEnabled()) {
+                continue;
+            }
+
+            boolean matched = matchRule(rule, path, method, clientIp, userId);
+            if (matched) {
+                if ("blacklist".equals(rule.getRuleType())) {
+                    log.debug("命中黑名单规则: {}, path={}", rule.getRuleName(), path);
+                    return false;
+                } else if ("whitelist".equals(rule.getRuleType())) {
+                    log.debug("命中白名单规则: {}, path={}", rule.getRuleName(), path);
+                    return true;
                 }
             }
-            
-            // 如果没有匹配到任何规则，检查是否存在白名单规则
-            boolean hasWhitelistRules = rules.stream()
-                    .anyMatch(rule -> rule.getEnabled() && "whitelist".equals(rule.getRuleType()));
-            
-            if (hasWhitelistRules) {
-                // 存在白名单规则但未匹配，拒绝访问
-                log.debug("存在白名单规则但未匹配，拒绝访问: path={}", path);
-                return false;
-            }
-            
-            // 默认允许访问
-            return true;
-            
-        } catch (Exception e) {
-            log.error("检查访问权限异常: path={}, method={}, clientIp={}", path, method, clientIp, e);
-            // 异常情况下默认允许访问，避免影响正常业务
-            return true;
         }
+
+        // 如果没有匹配到任何规则，检查是否存在白名单规则
+        boolean hasWhitelistRules = rules.stream()
+                .anyMatch(rule -> rule.getEnabled() && "whitelist".equals(rule.getRuleType()));
+
+        if (hasWhitelistRules) {
+            // 存在白名单规则但未匹配，拒绝访问
+            log.debug("存在白名单规则但未匹配，拒绝访问: path={}", path);
+            return false;
+        }
+
+        // 默认允许访问
+        return true;
     }
 
     /**
@@ -97,7 +105,7 @@ public class AccessControlService {
         String matchType = rule.getMatchType();
         String matchPattern = rule.getMatchPattern();
         String matchValue = rule.getMatchValue();
-        
+
         switch (matchType) {
             case "path":
                 return matchPath(path, matchPattern, matchValue);
@@ -120,7 +128,7 @@ public class AccessControlService {
         if (path == null || value == null) {
             return false;
         }
-        
+
         switch (pattern) {
             case "exact":
                 return path.equals(value);
@@ -154,7 +162,7 @@ public class AccessControlService {
         if (clientIp == null || value == null) {
             return false;
         }
-        
+
         switch (pattern) {
             case "exact":
                 return clientIp.equals(value);
@@ -218,43 +226,39 @@ public class AccessControlService {
      * 获取缓存的访问规则
      */
     @SuppressWarnings("unchecked")
-    private List<AccessRule> getCachedAccessRules() {
-        try {
-            List<AccessRule> rules = (List<AccessRule>) redisTemplate.opsForValue().get(CACHE_KEY_ALL_RULES);
-            if (rules == null) {
-                rules = refreshAccessRulesCache();
-            }
-            return rules;
-        } catch (Exception e) {
-            log.error("获取缓存访问规则失败，从数据库加载", e);
-            return accessRuleRepository.findEnabledRulesOrderByPriority();
-        }
+    private Mono<List<AccessRule>> getCachedAccessRules() {
+        return reactiveRedisTemplate.opsForValue().get(CACHE_KEY_ALL_RULES)
+                .cast(List.class)
+                .map(list -> (List<AccessRule>) list)
+                .switchIfEmpty(Mono.defer(() -> refreshAccessRulesCache()));
     }
 
     /**
      * 刷新访问规则缓存
      */
-    public List<AccessRule> refreshAccessRulesCache() {
-        try {
-            List<AccessRule> rules = accessRuleRepository.findEnabledRulesOrderByPriority();
-            redisTemplate.opsForValue().set(CACHE_KEY_ALL_RULES, rules, CACHE_EXPIRE_SECONDS, TimeUnit.SECONDS);
-            log.info("访问规则缓存已刷新，规则数量: {}", rules.size());
-            return rules;
-        } catch (Exception e) {
-            log.error("刷新访问规则缓存失败", e);
-            return List.of();
-        }
+    public Mono<List<AccessRule>> refreshAccessRulesCache() {
+        return accessRuleRepository.findEnabledRulesOrderByPriority()
+                .collectList()
+                .flatMap(rules -> reactiveRedisTemplate.opsForValue()
+                        .set(CACHE_KEY_ALL_RULES, rules, CACHE_EXPIRE)
+                        .thenReturn(rules))
+                .doOnNext(rules -> log.info("访问规则缓存已刷新，规则数量: {}", rules.size()))
+                .onErrorResume(e -> {
+                    log.error("刷新访问规则缓存失败", e);
+                    return Mono.just(List.of());
+                });
     }
 
     /**
      * 清除访问规则缓存
      */
-    public void clearAccessRulesCache() {
-        try {
-            redisTemplate.delete(CACHE_KEY_ALL_RULES);
-            log.info("访问规则缓存已清除");
-        } catch (Exception e) {
-            log.error("清除访问规则缓存失败", e);
-        }
+    public Mono<Void> clearAccessRulesCache() {
+        return reactiveRedisTemplate.delete(CACHE_KEY_ALL_RULES)
+                .doOnSuccess(v -> log.info("访问规则缓存已清除"))
+                .onErrorResume(e -> {
+                    log.error("清除访问规则缓存失败", e);
+                    return Mono.empty();
+                })
+                .then();
     }
 }

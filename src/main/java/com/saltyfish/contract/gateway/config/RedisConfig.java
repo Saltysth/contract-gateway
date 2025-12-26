@@ -3,11 +3,15 @@ package com.saltyfish.contract.gateway.config;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
@@ -18,7 +22,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 public class RedisConfig {
 
     /**
-     * Redis模板配置
+     * Redis模板配置（阻塞式，用于非响应式场景）
      */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
@@ -46,6 +50,35 @@ public class RedisConfig {
         template.setHashValueSerializer(jackson2JsonRedisSerializer);
         template.afterPropertiesSet();
 
+        return template;
+    }
+
+    /**
+     * 响应式Redis模板配置
+     */
+    @Bean
+    public ReactiveRedisTemplate<String, Object> reactiveRedisTemplate(ReactiveRedisConnectionFactory connectionFactory) {
+        // JSON序列化配置
+        ObjectMapper om = new ObjectMapper();
+        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        om.registerModule(new JavaTimeModule());
+
+        Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer<>(om, Object.class);
+
+        // String序列化配置
+        StringRedisSerializer stringSerializer = new StringRedisSerializer();
+
+        // 构建序列化上下文
+        RedisSerializationContext<String, Object> serializationContext = RedisSerializationContext
+                .<String, Object>newSerializationContext()
+                .key(stringSerializer)
+                .hashKey(stringSerializer)
+                .value(serializer)
+                .hashValue(serializer)
+                .build();
+
+        @SuppressWarnings("unchecked")
+        ReactiveRedisTemplate<String, Object> template = new ReactiveRedisTemplate<String, Object>(connectionFactory, serializationContext);
         return template;
     }
 }

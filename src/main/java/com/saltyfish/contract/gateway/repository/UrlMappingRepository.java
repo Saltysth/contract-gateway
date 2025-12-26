@@ -1,36 +1,36 @@
 package com.saltyfish.contract.gateway.repository;
 
 import com.saltyfish.contract.gateway.entity.UrlMapping;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.r2dbc.repository.R2dbcRepository;
+import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * URL Mapping Repository
- * URL映射数据访问层
+ * URL映射数据访问层（WebFlux响应式版本）
  */
 @Repository
-public interface UrlMappingRepository extends JpaRepository<UrlMapping, Long> {
+public interface UrlMappingRepository extends R2dbcRepository<UrlMapping, Long> {
 
     /**
      * 查询启用的URL映射，按优先级降序排列
      */
-    @Query("SELECT um FROM UrlMapping um WHERE um.enabled = true ORDER BY um.priority DESC, um.id ASC")
-    List<UrlMapping> findEnabledMappingsOrderByPriority();
+    @Query("SELECT * FROM url_mappings WHERE enabled = true ORDER BY priority DESC, id ASC")
+    Flux<UrlMapping> findEnabledMappingsOrderByPriority();
 
     /**
      * 根据外部路径查询URL映射
      */
-    @Query("SELECT um FROM UrlMapping um WHERE um.enabled = true AND um.externalPath = :externalPath")
-    Optional<UrlMapping> findEnabledMappingByExternalPath(@Param("externalPath") String externalPath);
+    @Query("SELECT * FROM url_mappings WHERE enabled = true AND external_path = :externalPath LIMIT 1")
+    Mono<UrlMapping> findEnabledMappingByExternalPath(@Param("externalPath") String externalPath);
 
     /**
      * 根据目标服务查询URL映射
      */
-    @Query("SELECT um FROM UrlMapping um WHERE um.enabled = true AND um.targetService = :targetService ORDER BY um.priority DESC, um.id ASC")
-    List<UrlMapping> findEnabledMappingsByTargetService(@Param("targetService") String targetService);
+    @Query("SELECT * FROM url_mappings WHERE enabled = true AND target_service = :targetService ORDER BY priority DESC, id ASC")
+    Flux<UrlMapping> findEnabledMappingsByTargetService(@Param("targetService") String targetService);
 }
