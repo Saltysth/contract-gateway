@@ -1,11 +1,9 @@
 package com.saltyfish.contract.gateway;
 
-import com.ruoyi.feign.config.RemoteAuthAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
-import org.springframework.context.annotation.Import;
 
 /**
  * Contract Gateway Application
@@ -14,7 +12,6 @@ import org.springframework.context.annotation.Import;
 @SpringBootApplication
 @EnableDiscoveryClient
 @EnableFeignClients(basePackages = "com.ruoyi.feign.service")
-@Import({RemoteAuthAutoConfiguration.class})
 public class ContractGatewayApplication {
 
     public static void main(String[] args) {
