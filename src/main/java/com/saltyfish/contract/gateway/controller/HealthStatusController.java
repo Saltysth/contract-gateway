@@ -1,6 +1,6 @@
 package com.saltyfish.contract.gateway.controller;
 
-import com.ruoyi.feign.annotation.RemotePreAuthorize;
+import com.ruoyi.common.annotation.Anonymous;
 import com.saltyfish.contract.gateway.dto.ServiceHealthDto;
 import com.saltyfish.contract.gateway.service.HealthStatusService;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
@@ -35,7 +34,7 @@ public class HealthStatusController {
     /**
      * 获取所有微服务的健康状态
      */
-    @RemotePreAuthorize("@ss.hasRole('admin')")
+    @Anonymous
     @GetMapping("/services")
     public ResponseEntity<Map<String, Object>> getAllServiceHealth() {
         Map<String, Object> result = new HashMap<>();
@@ -59,29 +58,4 @@ public class HealthStatusController {
         return ResponseEntity.ok(result);
     }
 
-    /**
-     * 获取单个服务的健康状态
-     */
-    @GetMapping("/service")
-    public ResponseEntity<Map<String, Object>> getServiceHealth(@RequestParam String serviceName) {
-        Map<String, Object> result = new HashMap<>();
-
-        try {
-            ServiceHealthDto serviceHealth = healthStatusService.getServiceHealth(serviceName);
-
-            result.put("code", 200);
-            result.put("message", "success");
-            result.put("data", serviceHealth);
-            result.put("updateTime", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-
-        } catch (Exception e) {
-            log.error("获取服务健康状态失败: serviceName={}", serviceName, e);
-            result.put("code", 500);
-            result.put("message", "获取服务健康状态失败: " + e.getMessage());
-            result.put("data", null);
-            result.put("updateTime", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        }
-
-        return ResponseEntity.ok(result);
-    }
 }

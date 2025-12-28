@@ -1,5 +1,7 @@
 package com.saltyfish.contract.gateway.controller;
 
+import com.ruoyi.common.annotation.Anonymous;
+import com.ruoyi.feign.annotation.RemotePreAuthorize;
 import com.saltyfish.contract.gateway.service.AccessControlService;
 import com.saltyfish.contract.gateway.service.UrlMappingService;
 import lombok.extern.slf4j.Slf4j;
@@ -7,7 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionLocator;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -32,6 +39,7 @@ public class AdminController {
     /**
      * 刷新访问规则缓存
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @PostMapping("/cache/access-rules/refresh")
     public Mono<ResponseEntity<String>> refreshAccessRulesCache() {
         return accessControlService.refreshAccessRulesCache()
@@ -45,6 +53,7 @@ public class AdminController {
     /**
      * 清除访问规则缓存
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @DeleteMapping("/cache/access-rules")
     public Mono<ResponseEntity<String>> clearAccessRulesCache() {
         return accessControlService.clearAccessRulesCache()
@@ -58,6 +67,7 @@ public class AdminController {
     /**
      * 刷新URL映射缓存
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @PostMapping("/cache/url-mappings/refresh")
     public Mono<ResponseEntity<String>> refreshUrlMappingsCache() {
         return urlMappingService.refreshUrlMappingsCache()
@@ -71,6 +81,7 @@ public class AdminController {
     /**
      * 清除URL映射缓存
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @DeleteMapping("/cache/url-mappings")
     public Mono<ResponseEntity<String>> clearUrlMappingsCache() {
         return urlMappingService.clearUrlMappingsCache()
@@ -84,18 +95,10 @@ public class AdminController {
     /**
      * 健康检查
      */
+    @Anonymous
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("Gateway is healthy");
-    }
-
-    /**
-     * 系统信息
-     */
-    @GetMapping("/info")
-    public ResponseEntity<String> info() {
-        // TODO: 返回系统信息，如版本、启动时间、配置信息等
-        return ResponseEntity.ok("Gateway system info");
     }
 
     // ==================== 路由管理接口 ====================
@@ -103,6 +106,7 @@ public class AdminController {
     /**
      * 获取所有路由定义
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @GetMapping("/routes")
     public Flux<RouteDefinition> getAllRoutes() {
         return routeDefinitionLocator.getRouteDefinitions()
@@ -114,6 +118,7 @@ public class AdminController {
     /**
      * 根据ID获取路由定义
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @GetMapping("/routes/{id}")
     public Mono<ResponseEntity<RouteDefinition>> getRouteById(@PathVariable String id) {
         return routeDefinitionLocator.getRouteDefinitions()
@@ -129,6 +134,7 @@ public class AdminController {
      * 刷新路由配置（从Nacos重新加载）
      * TODO: 实现路由配置的动态刷新功能
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @PostMapping("/routes/refresh")
     public Mono<ResponseEntity<String>> refreshRoutes() {
         // TODO: 调用DynamicRouteConfig的路由刷新方法
@@ -139,6 +145,7 @@ public class AdminController {
     /**
      * 获取路由统计信息
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @GetMapping("/routes/stats")
     public Mono<ResponseEntity<Object>> getRouteStats() {
         // TODO: 实现路由统计功能，记录每个路由的调用次数、响应时间等

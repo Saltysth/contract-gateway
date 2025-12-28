@@ -1,10 +1,15 @@
 package com.saltyfish.contract.gateway.controller;
 
+import com.ruoyi.feign.annotation.RemotePreAuthorize;
 import com.saltyfish.contract.gateway.service.NacosConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Config Controller
@@ -21,6 +26,7 @@ public class ConfigController {
     /**
      * 获取访问规则配置
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @GetMapping("/access-rules")
     public ResponseEntity<String> getAccessRuleConfig() {
         try {
@@ -35,6 +41,7 @@ public class ConfigController {
     /**
      * 更新访问规则配置
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @PostMapping("/access-rules")
     public ResponseEntity<String> updateAccessRuleConfig(@RequestBody String config) {
         try {
@@ -53,6 +60,7 @@ public class ConfigController {
     /**
      * 获取URL映射配置
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @GetMapping("/url-mappings")
     public ResponseEntity<String> getUrlMappingConfig() {
         try {
@@ -67,6 +75,7 @@ public class ConfigController {
     /**
      * 更新URL映射配置
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @PostMapping("/url-mappings")
     public ResponseEntity<String> updateUrlMappingConfig(@RequestBody String config) {
         try {
@@ -85,6 +94,7 @@ public class ConfigController {
     /**
      * 获取路由配置
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @GetMapping("/routes")
     public ResponseEntity<String> getRouteConfig() {
         try {
@@ -99,6 +109,7 @@ public class ConfigController {
     /**
      * 更新路由配置
      */
+    @RemotePreAuthorize("@ss.hasRole('admin')")
     @PostMapping("/routes")
     public ResponseEntity<String> updateRouteConfig(@RequestBody String config) {
         try {
