@@ -1,13 +1,11 @@
 package com.saltyfish.contract.gateway.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.saltyfish.contract.gateway.entity.UrlMapping;
 import com.saltyfish.contract.gateway.repository.UrlMappingRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;

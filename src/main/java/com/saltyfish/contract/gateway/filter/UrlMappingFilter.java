@@ -1,6 +1,5 @@
 package com.saltyfish.contract.gateway.filter;
 
-import com.saltyfish.contract.gateway.entity.UrlMapping;
 import com.saltyfish.contract.gateway.service.UrlMappingService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
