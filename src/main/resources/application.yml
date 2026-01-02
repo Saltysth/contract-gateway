@@ -2,6 +2,12 @@ server:
   port: 9090
   servlet:
     context-path: /contract-gateway
+#  ssl:
+#    key-store: classpath:saltybit.top.pfx
+#    key-store-type: PKCS12
+#    key-store-password: rki53y99720u
+#    key-alias: saltybit.top
+
 
 spring:
   # R2DBC配置（适用于WebFlux）
